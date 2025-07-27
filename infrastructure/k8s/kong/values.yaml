@@ -1,0 +1,82 @@
+# values.yaml
+image:
+  repository: kong/kong
+  tag: "3.9.0"
+
+secretVolumes:
+  - kong-cluster-cert
+
+env:
+  role: traditional
+  database: "postgres"
+  pg_host: kong-postgresql.kong.svc.cluster.local
+  pg_database: kong
+  pg_user: kong
+  pg_password: demo123
+  pg_ssl: "off"
+
+  # Cluster configuration
+  cluster_listen: "0.0.0.0:8005"
+  lua_ssl_trusted_certificate: /etc/secrets/kong-cluster-cert/tls.crt
+  cluster_cert: /etc/secrets/kong-cluster-cert/tls.crt
+  cluster_cert_key: /etc/secrets/kong-cluster-cert/tls.key
+
+  # Admin and Manager
+  admin_listen: 0.0.0.0:8001
+  admin_gui_api_url: http://139.59.218.173:8001
+  admin_api_uri: http://139.59.218.173:8001 
+
+proxy:
+  enabled: true
+  type: LoadBalancer
+  http:
+    enabled: true
+    servicePort: 8000
+    containerPort: 8000
+
+admin:
+  enabled: true
+  type: LoadBalancer
+  http:
+    enabled: true
+    servicePort: 8001
+    containerPort: 8001
+  https:
+    enabled: true
+    servicePort: 8444
+    containerPort: 8444
+
+manager:
+  enabled: true
+  type: LoadBalancer
+  http:
+    enabled: true
+    servicePort: 8002
+    containerPort: 8002
+
+cluster:
+  enabled: true
+  type: ClusterIP
+  http:
+    enabled: true
+    servicePort: 8005
+    containerPort: 8005
+
+plugins:
+  configMaps: []
+  secrets: []
+
+postgresql:
+  enabled: true
+  auth:
+    password: demo123
+
+enterprise:
+  enabled: false
+
+ingressController:
+  enabled: false
+
+migrations:
+  init: true
+  preUpgrade: false

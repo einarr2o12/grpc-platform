@@ -1,0 +1,4 @@
+proxy:
+  trace:
+    collectorSvcAddr: signoz-otel-collector.platform.svc.cluster.local:4317
+    collectorSvcAccount: signoz-otel-collector

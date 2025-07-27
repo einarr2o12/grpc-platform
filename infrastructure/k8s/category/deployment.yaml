@@ -1,0 +1,40 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: category-service
+  namespace: category-service
+  labels:
+    app: category-service
+    service: category
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: category-service
+  template:
+    metadata:
+      labels:
+        app: category-service
+        service: category
+      annotations: {}
+    spec:
+      containers:
+      - name: category-service
+        image: 1911997/bff-category:v1.0
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 50051
+        env:
+        - name: NODE_ENV
+          value: "production"
+        - name: MONGODB_URI
+          value: "mongodb://mongodb-category:27017/categorydb"
+        - name: PORT
+          value: "50051"
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "200m"

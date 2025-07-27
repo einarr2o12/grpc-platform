@@ -1,0 +1,113 @@
+version: '3.8'
+
+services:
+  # MongoDB for Category Service
+  category-db:
+    image: mongo:7.0
+    container_name: category-db
+    restart: always
+    environment:
+      MONGO_INITDB_DATABASE: category-service
+    ports:
+      - "27017:27017"
+    volumes:
+      - category-data:/data/db
+    networks:
+      - grpc-network
+
+  # MongoDB for Product Service
+  product-db:
+    image: mongo:7.0
+    container_name: product-db
+    restart: always
+    environment:
+      MONGO_INITDB_DATABASE: product-service
+    ports:
+      - "27018:27017"
+    volumes:
+      - product-data:/data/db
+    networks:
+      - grpc-network
+
+  # Category Service
+  category-service:
+    build:
+      context: .
+      dockerfile: ./category-service/Dockerfile
+    container_name: category-service
+    restart: always
+    environment:
+      - NODE_ENV=production
+      - MONGODB_URI=mongodb://category-db:27017/category-service
+      - PORT=3001
+    ports:
+      - "50051:50051"  # gRPC
+    depends_on:
+      - category-db
+    networks:
+      - grpc-network
+
+  # Product Service
+  product-service:
+    build:
+      context: .
+      dockerfile: ./product-service/Dockerfile
+    container_name: product-service
+    restart: always
+    environment:
+      - NODE_ENV=production
+      - MONGODB_URI=mongodb://product-db:27017/product-service
+      - PORT=3002
+      - CATEGORY_SERVICE_URL=category-service:50051
+    ports:
+      - "50052:50052"  # gRPC
+    depends_on:
+      - product-db
+      - category-service
+    networks:
+      - grpc-network
+
+  # PHP API Gateway
+  # php-api-gateway:
+  #   build:
+  #     context: .
+  #     dockerfile: ./php-api-gateway/Dockerfile
+  #   container_name: php-api-gateway
+  #   restart: always
+  #   environment:
+  #     - CATEGORY_SERVICE_URL=category-service:50051
+  #     - PRODUCT_SERVICE_URL=product-service:50052
+  #   ports:
+  #     - "8080:8080"  # HTTP API
+  #   depends_on:
+  #     - category-service
+  #     - product-service
+  #   networks:
+  #     - grpc-network
+
+  # Go API Gateway
+  go-api-gateway:
+    build:
+      context: .
+      dockerfile: ./go-api-gateway/Dockerfile
+    container_name: go-api-gateway
+    restart: always
+    environment:
+      - CATEGORY_SERVICE_URL=category-service:50051
+      - PRODUCT_SERVICE_URL=product-service:50052
+      - PORT=8080
+    ports:
+      - "8081:8080"  # HTTP API (different port from PHP)
+    depends_on:
+      - category-service
+      - product-service
+    networks:
+      - grpc-network
+
+volumes:
+  category-data:
+  product-data:
+
+networks:
+  grpc-network:
+    driver: bridge

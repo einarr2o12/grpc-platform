@@ -1,0 +1,42 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api-gateway
+  namespace: controller-service
+  labels:
+    app: api-gateway
+    service: controller
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: api-gateway
+  template:
+    metadata:
+      labels:
+        app: api-gateway
+        service: controller
+      annotations: {}
+    spec:
+      containers:
+      - name: api-gateway
+        image: 1911997/bff-service:v1.0
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8080
+        env:
+        - name: GIN_MODE
+          value: "release"
+        - name: CATEGORY_SERVICE_URL
+          value: "category-service.category-service.svc.cluster.local:50051"
+        - name: PRODUCT_SERVICE_URL
+          value: "product-service.product-service.svc.cluster.local:50052"
+        - name: PORT
+          value: "8080"
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "50m"
+          limits:
+            memory: "128Mi"
+            cpu: "100m"

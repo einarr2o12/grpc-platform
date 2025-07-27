@@ -1,0 +1,42 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: product-service
+  namespace: product-service
+  labels:
+    app: product-service
+    service: product
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: product-service
+  template:
+    metadata:
+      labels:
+        app: product-service
+        service: product
+      annotations: {}
+    spec:
+      containers:
+      - name: product-service
+        image: 1911997/bff-product:v1.0
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 50052
+        env:
+        - name: NODE_ENV
+          value: "production"
+        - name: MONGODB_URI
+          value: "mongodb://mongodb-product:27017/productdb"
+        - name: CATEGORY_SERVICE_URL
+          value: "category-service.category-service.svc.cluster.local:50051"
+        - name: PORT
+          value: "50052"
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "200m"

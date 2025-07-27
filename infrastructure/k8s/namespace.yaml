@@ -1,0 +1,27 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: category-service
+  labels:
+    name: category-service
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: product-service
+  labels:
+    name: product-service
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: controller-service
+  labels:
+    name: controller-service
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: platform
+  labels:
+    name: platform
