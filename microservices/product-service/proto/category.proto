@@ -1,0 +1,45 @@
+syntax = "proto3";
+
+package category;
+
+option go_package = "go-api-gateway/internal/generated/category";
+
+service CategoryService {
+  rpc GetCategory(CategoryRequest) returns (CategoryResponse);
+  rpc ListCategories(Empty) returns (CategoriesResponse);
+  rpc CreateCategory(CreateCategoryRequest) returns (CategoryResponse);
+  rpc UpdateCategory(UpdateCategoryRequest) returns (CategoryResponse);
+  rpc DeleteCategory(CategoryRequest) returns (DeleteResponse);
+}
+
+message CategoryRequest {
+  string id = 1;
+}
+
+message CategoryResponse {
+  string id = 1;
+  string name = 2;
+  string description = 3;
+}
+
+message CategoriesResponse {
+  repeated CategoryResponse categories = 1;
+}
+
+message CreateCategoryRequest {
+  string name = 1;
+  string description = 2;
+}
+
+message UpdateCategoryRequest {
+  string id = 1;
+  string name = 2;
+  string description = 3;
+}
+
+message Empty {}
+
+message DeleteResponse {
+  bool success = 1;
+  string message = 2;
+}
