@@ -133,8 +133,8 @@ jobs:
         SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
       with:
         args: >
-          -Dsonar.projectKey=grpc-platform-go-api-gateway
-          -Dsonar.projectName="gRPC Platform - Go API Gateway"
+          -Dsonar.projectKey=${{ secrets.SONAR_PROJECT_KEY }}
+          -Dsonar.projectName="gRPC Platform"
           -Dsonar.organization=${{ secrets.SONAR_ORGANIZATION }}
           -Dsonar.sources=${{ env.SERVICE_PATH }}
           -Dsonar.exclusions=**/*_test.go,**/vendor/**,**/generated/**
