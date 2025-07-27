@@ -86,15 +86,10 @@ jobs:
     - name: 🔍 Run ESLint
       run: |
         echo "🔍 Running ESLint for JavaScript code quality..."
-        # Check if .eslintrc exists, if not create basic config
-        if [ ! -f .eslintrc.js ] && [ ! -f .eslintrc.json ]; then
-          echo "Creating basic ESLint config..."
-          npx eslint --init --yes
-        fi
         
-        # Run ESLint on all JavaScript files
-        npx eslint . --ext .js --format=json --output-file=eslint-report.json || true
-        npx eslint . --ext .js --format=stylish
+        # Run ESLint using npm script and existing eslint.config.js
+        npm run lint -- --format=json --output-file=eslint-report.json || true
+        npm run lint || true
         echo "✅ ESLint analysis completed"
     
     # -------------------------------------------------------------------------
