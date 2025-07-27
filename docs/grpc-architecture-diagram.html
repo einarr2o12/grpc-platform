@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>gRPC Microservices Architecture</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1, h2 {
+            color: #333;
+        }
+        .diagram-container {
+            margin: 30px 0;
+            padding: 20px;
+            background: #fafafa;
+            border-radius: 8px;
+            overflow-x: auto;
+        }
+        .mermaid {
+            text-align: center;
+        }
+        .description {
+            margin: 20px 0;
+            padding: 15px;
+            background: #e8f4fd;
+            border-left: 4px solid #1976d2;
+            border-radius: 4px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+            font-weight: 600;
+        }
+        tr:hover {
+            background-color: #f5f5f5;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 gRPC Microservices Architecture with CI/CD</h1>
+        
+        <div class="description">
+            <p><strong>Overview:</strong> Complete architecture for gRPC microservices with zero-code observability using Istio service mesh, GitOps deployment with ArgoCD, and comprehensive monitoring stack.</p>
+        </div>
+
+        <h2>📊 Complete System Architecture</h2>
+        <div class="diagram-container">
+            <div class="mermaid">
+graph TB
+    subgraph "Developer Workflow"
+        Dev[👨‍💻 Developer] --> Git[📦 GitHub Repository]
+    end
+
+    subgraph "CI/CD Pipeline"
+        Git --> GHA[🔄 GitHub Actions]
+        GHA --> Test[✅ Run Tests]
+        Test --> Build[🏗️ Build Docker Images]
+        Build --> Push[📤 Push to Registry]
+        Push --> Helm[📝 Update Helm Values]
+        Helm --> GitOps[💾 Git Commit]
+        GitOps --> ArgoCD[🔄 ArgoCD]
+    end
+
+    subgraph "Kubernetes Cluster"
+        subgraph "GitOps"
+            ArgoCD --> HelmCharts[📊 Helm Charts]
+        end
+
+        subgraph "Infrastructure Layer"
+            Vault[🔐 HashiCorp Vault]
+            Istio[🕸️ Istio Service Mesh]
+            Kong[🌐 Kong Gateway]
+        end
+
+        subgraph "Microservices"
+            Kong --> APIGateway[🚪 API Gateway/BFF<br/>Go - :8080]
+            APIGateway --> CategorySvc[📁 Category Service<br/>Node.js - :50051]
+            APIGateway --> ProductSvc[📦 Product Service<br/>Node.js - :50052]
+            APIGateway --> ReviewSvc[⭐ Review Service<br/>PHP - :50053]
+            
+            CategorySvc --> MongoDB1[(🍃 MongoDB)]
+            ProductSvc --> MongoDB2[(🍃 MongoDB)]
+            ReviewSvc --> MongoDB3[(🍃 MongoDB)]
+        end
+
+        subgraph "Observability Stack"
+            Prometheus[📊 Prometheus]
+            Grafana[📈 Grafana]
+            Jaeger[🔍 Jaeger]
+            Kiali[🗺️ Kiali]
+            
+            Istio -.-> Prometheus
+            Prometheus --> Grafana
+            Istio -.-> Jaeger
+            Istio -.-> Kiali
+        end
+
+        Vault -.-> CategorySvc
+        Vault -.-> ProductSvc
+        Vault -.-> ReviewSvc
+    end
+
+    subgraph "External Access"
+        Users[👥 Users] --> LB[⚖️ Load Balancer]
+        LB --> Kong
+        
+        DevOps[🔧 DevOps Team] --> VaultUI[Vault UI]
+        DevOps --> GrafanaUI[Grafana UI]
+        DevOps --> KialiUI[Kiali UI]
+        DevOps --> ArgoUI[ArgoCD UI]
+    end
+
+    style Dev fill:#e1f5fe
+    style Git fill:#fff3e0
+    style GHA fill:#f3e5f5
+    style Kong fill:#e8f5e9
+    style APIGateway fill:#fff9c4
+    style Vault fill:#ffebee
+    style Prometheus fill:#e3f2fd
+    style Grafana fill:#e3f2fd
+    style Jaeger fill:#e3f2fd
+    style Kiali fill:#e3f2fd
+            </div>
+        </div>
+
+        <h2>🔄 CI/CD Pipeline Flow</h2>
+        <div class="diagram-container">
+            <div class="mermaid">
+graph LR
+    subgraph "GitHub"
+        Code[💻 Source Code] --> PR[🔀 Pull Request]
+        PR --> Merge[✅ Merge to Main]
+    end
+
+    subgraph "GitHub Actions"
+        Merge --> Trigger[⚡ Trigger Workflow]
+        Trigger --> Lint[🔍 Lint & Format]
+        Lint --> UnitTest[🧪 Unit Tests]
+        UnitTest --> BuildImg[🏗️ Build Docker Image]
+        BuildImg --> ScanImg[🛡️ Security Scan]
+        ScanImg --> PushImg[📤 Push to Registry]
+        PushImg --> UpdateHelm[📝 Update Helm Values]
+        UpdateHelm --> CommitHelm[💾 Commit to Config Repo]
+    end
+
+    subgraph "ArgoCD"
+        CommitHelm --> Sync[🔄 Auto Sync]
+        Sync --> Deploy[🚀 Deploy to K8s]
+        Deploy --> Health[❤️ Health Check]
+    end
+
+    subgraph "Environments"
+        Health --> Dev[🧪 Development]
+        Dev --> Staging[🎭 Staging]
+        Staging --> Prod[🏭 Production]
+    end
+
+    style Code fill:#e8f5e9
+    style Merge fill:#c8e6c9
+    style BuildImg fill:#fff9c4
+    style Deploy fill:#bbdefb
+    style Dev fill:#e1f5fe
+    style Staging fill:#fff3e0
+    style Prod fill:#ffccbc
+            </div>
+        </div>
+
+        <h2>🔐 Secrets Management Flow</h2>
+        <div class="diagram-container">
+            <div class="mermaid">
+graph TB
+    subgraph "Vault Setup"
+        VaultInit[🏁 Vault Initialization] --> RootToken[🔑 Root Token]
+        RootToken --> Policies[📜 Create Policies]
+        Policies --> AppRole[👤 App Roles]
+        AppRole --> ServiceAuth[🔐 Service Authentication]
+    end
+
+    subgraph "Secrets Flow"
+        ServiceAuth --> K8sAuth[☸️ Kubernetes Auth]
+        K8sAuth --> ServiceAccount[🤖 Service Account]
+        ServiceAccount --> PodIdentity[🆔 Pod Identity]
+        PodIdentity --> GetSecrets[📥 Retrieve Secrets]
+        GetSecrets --> EnvVars[🔤 Environment Variables]
+    end
+
+    subgraph "Secret Types"
+        Vault --> DBCreds[🗄️ DB Credentials]
+        Vault --> APICerts[📜 API Certificates]
+        Vault --> ServiceKeys[🗝️ Service Keys]
+        Vault --> ConfigData[⚙️ Configuration]
+    end
+
+    style VaultInit fill:#ffebee
+    style RootToken fill:#ffcdd2
+    style GetSecrets fill:#c8e6c9
+    style DBCreds fill:#e1f5fe
+            </div>
+        </div>
+
+        <h2>🌐 Network Flow Diagram</h2>
+        <div class="diagram-container">
+            <div class="mermaid">
+graph TB
+    Internet[🌍 Internet] --> WAF[🛡️ WAF/CDN]
+    WAF --> LB[⚖️ Load Balancer]
+    
+    subgraph "Ingress Layer"
+        LB --> Kong[🌐 Kong Gateway<br/>:8000]
+    end
+    
+    subgraph "Service Mesh - Istio"
+        Kong --> IG[🚪 Istio Gateway]
+        IG --> VS[📋 Virtual Services]
+        
+        VS --> APIGW[🔄 API Gateway<br/>HTTP :8080]
+        
+        APIGW --> CS[📁 Category Service<br/>gRPC :50051]
+        APIGW --> PS[📦 Product Service<br/>gRPC :50052]
+        APIGW --> RS[⭐ Review Service<br/>gRPC :50053]
+    end
+    
+    subgraph "Data Layer"
+        CS --> MDB1[(🍃 MongoDB<br/>:27017)]
+        PS --> MDB2[(🍃 MongoDB<br/>:27017)]
+        RS --> MDB3[(🍃 MongoDB<br/>:27017)]
+    end
+    
+    subgraph "Observability"
+        Envoy[🔷 Envoy Sidecars] -.-> Telemetry[📊 Telemetry Data]
+        Telemetry --> Metrics[📈 Metrics/Traces/Logs]
+    end
+
+    style Internet fill:#e3f2fd
+    style Kong fill:#e8f5e9
+    style APIGW fill:#fff9c4
+    style CS fill:#e1f5fe
+    style PS fill:#e1f5fe
+    style RS fill:#e1f5fe
+            </div>
+        </div>
+
+        <h2>📦 Technology Stack</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Layer</th>
+                    <th>Technology</th>
+                    <th>Purpose</th>
+                    <th>Port</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Languages</td>
+                    <td>Go, Node.js, PHP</td>
+                    <td>Polyglot microservices</td>
+                    <td>-</td>
+                </tr>
+                <tr>
+                    <td>Protocol</td>
+                    <td>gRPC, HTTP/REST</td>
+                    <td>Service communication</td>
+                    <td>-</td>
+                </tr>
+                <tr>
+                    <td>API Gateway</td>
+                    <td>Kong</td>
+                    <td>External API management</td>
+                    <td>8000</td>
+                </tr>
+                <tr>
+                    <td>BFF Gateway</td>
+                    <td>Custom Go Service</td>
+                    <td>HTTP to gRPC translation</td>
+                    <td>8080</td>
+                </tr>
+                <tr>
+                    <td>Service Mesh</td>
+                    <td>Istio</td>
+                    <td>Observability, security, traffic management</td>
+                    <td>-</td>
+                </tr>
+                <tr>
+                    <td>Container</td>
+                    <td>Docker</td>
+                    <td>Application packaging</td>
+                    <td>-</td>
+                </tr>
+                <tr>
+                    <td>Orchestration</td>
+                    <td>Kubernetes</td>
+                    <td>Container management</td>
+                    <td>-</td>
+                </tr>
+                <tr>
+                    <td>CI/CD</td>
+                    <td>GitHub Actions, ArgoCD</td>
+                    <td>Build automation & GitOps</td>
+                    <td>-</td>
+                </tr>
+                <tr>
+                    <td>Monitoring</td>
+                    <td>Prometheus, Grafana</td>
+                    <td>Metrics collection & visualization</td>
+                    <td>9090, 3000</td>
+                </tr>
+                <tr>
+                    <td>Tracing</td>
+                    <td>Jaeger</td>
+                    <td>Distributed tracing</td>
+                    <td>16686</td>
+                </tr>
+                <tr>
+                    <td>Service Viz</td>
+                    <td>Kiali</td>
+                    <td>Service mesh visualization</td>
+                    <td>20001</td>
+                </tr>
+                <tr>
+                    <td>Secrets</td>
+                    <td>HashiCorp Vault</td>
+                    <td>Secret management</td>
+                    <td>8200</td>
+                </tr>
+                <tr>
+                    <td>Database</td>
+                    <td>MongoDB</td>
+                    <td>Data persistence</td>
+                    <td>27017</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h2>🚀 Deployment Environments</h2>
+        <div class="diagram-container">
+            <div class="mermaid">
+graph LR
+    Dev[🧪 Development<br/>Auto Deploy from Main<br/>Feature Testing] 
+    Dev --> Staging[🎭 Staging<br/>Manual Promotion<br/>QA & Performance Tests]
+    Staging --> Prod[🏭 Production<br/>Manual Promotion<br/>Live Traffic]
+    
+    style Dev fill:#e1f5fe
+    style Staging fill:#fff3e0
+    style Prod fill:#ffccbc
+            </div>
+        </div>
+
+        <h2>🔑 Key Features</h2>
+        <div class="description">
+            <ul>
+                <li>✅ <strong>Zero-Code Observability:</strong> Automatic metrics, traces, and logs via Istio</li>
+                <li>✅ <strong>GitOps Deployment:</strong> Declarative deployments with ArgoCD</li>
+                <li>✅ <strong>Polyglot Services:</strong> Go, Node.js, and PHP microservices</li>
+                <li>✅ <strong>Secure by Default:</strong> mTLS, RBAC, and Vault integration</li>
+                <li>✅ <strong>Full CI/CD Pipeline:</strong> Automated testing, building, and deployment</li>
+                <li>✅ <strong>Progressive Delivery:</strong> Environment promotion workflow</li>
+                <li>✅ <strong>Complete Observability:</strong> Metrics, traces, logs, and service mesh visualization</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        mermaid.initialize({ 
+            startOnLoad: true,
+            theme: 'default',
+            themeVariables: {
+                primaryColor: '#fff',
+                primaryTextColor: '#000',
+                primaryBorderColor: '#000',
+                lineColor: '#333',
+                secondaryColor: '#f5f5f5',
+                tertiaryColor: '#fff'
+            }
+        });
+    </script>
+</body>
+</html>
