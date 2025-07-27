@@ -167,7 +167,7 @@ jobs:
         args: >
           -Dsonar.projectKey=grpc-platform-category-service
           -Dsonar.projectName="gRPC Platform - Category Service"
-          -Dsonar.organization=YOUR_GITHUB_USERNAME
+          -Dsonar.organization=${{ secrets.SONAR_ORGANIZATION }}
           -Dsonar.sources=${{ env.SERVICE_PATH }}
           -Dsonar.exclusions=**/node_modules/**,**/test/**,**/coverage/**
           -Dsonar.tests=${{ env.SERVICE_PATH }}/test

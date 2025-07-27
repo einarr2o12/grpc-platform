@@ -135,7 +135,7 @@ jobs:
         args: >
           -Dsonar.projectKey=grpc-platform-go-api-gateway
           -Dsonar.projectName="gRPC Platform - Go API Gateway"
-          -Dsonar.organization=YOUR_GITHUB_USERNAME
+          -Dsonar.organization=${{ secrets.SONAR_ORGANIZATION }}
           -Dsonar.sources=${{ env.SERVICE_PATH }}
           -Dsonar.exclusions=**/*_test.go,**/vendor/**,**/generated/**
           -Dsonar.tests=${{ env.SERVICE_PATH }}
