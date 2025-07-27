@@ -169,7 +169,6 @@ jobs:
           -Dsonar.tests=${{ env.SERVICE_PATH }}/test
           -Dsonar.test.inclusions=**/*.test.js,**/*.spec.js
           -Dsonar.javascript.lcov.reportPaths=${{ env.SERVICE_PATH }}/coverage/lcov.info
-          -Dsonar.testExecutionReportPaths=${{ env.SERVICE_PATH }}/test-results.json
     
     # -------------------------------------------------------------------------
     # STEP 10: SONARQUBE QUALITY GATE
