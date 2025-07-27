@@ -40,7 +40,7 @@ func NewProductService() (*ProductService, error) {
 		serviceURL = "product-service:50052"
 	}
 
-	conn, err := grpc.Dial(serviceURL, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	conn, err := grpc.NewClient(serviceURL, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to product service: %w", err)
 	}

@@ -36,7 +36,7 @@ func NewCategoryService() (*CategoryService, error) {
 		serviceURL = "category-service:50051"
 	}
 
-	conn, err := grpc.Dial(serviceURL, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	conn, err := grpc.NewClient(serviceURL, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to category service: %w", err)
 	}
