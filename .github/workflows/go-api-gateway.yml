@@ -21,6 +21,7 @@ on:
     branches: [ main ]
     paths:
       - 'microservices/go-api-gateway/**'
+      - '.github/workflows/go-api-gateway.yml'
 
 # =============================================================================
 # STEP 2: ENVIRONMENT VARIABLES

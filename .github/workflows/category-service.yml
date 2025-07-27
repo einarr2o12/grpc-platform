@@ -22,6 +22,7 @@ on:
     branches: [ main ]
     paths:
       - 'microservices/category-service/**'
+      - '.github/workflows/category-service.yml'
 
 # =============================================================================
 # STEP 2: ENVIRONMENT VARIABLES

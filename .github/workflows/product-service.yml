@@ -20,6 +20,7 @@ on:
     branches: [ main ]
     paths:
       - 'microservices/product-service/**'
+      - '.github/workflows/product-service.yml'
 
 # =============================================================================
 # STEP 2: ENVIRONMENT VARIABLES
