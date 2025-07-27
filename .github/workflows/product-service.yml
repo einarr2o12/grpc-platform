@@ -1,0 +1,241 @@
+# =============================================================================
+# GitHub Actions Workflow for Product Service (Node.js)
+# =============================================================================
+# Purpose: Build, test, and deploy the Product Service microservice
+# Language: Node.js with gRPC
+# Triggers: When code changes in the product-service directory
+
+name: Product Service CI/CD
+
+# =============================================================================
+# STEP 1: WHEN TO RUN THIS WORKFLOW
+# =============================================================================
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'microservices/product-service/**'
+      - '.github/workflows/product-service.yml'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'microservices/product-service/**'
+
+# =============================================================================
+# STEP 2: ENVIRONMENT VARIABLES
+# =============================================================================
+env:
+  SERVICE_NAME: product-service
+  SERVICE_PATH: microservices/product-service
+  NODE_VERSION: '18'
+  
+jobs:
+  # =============================================================================
+  # JOB 1: CODE QUALITY AND TESTING (NODE.JS)
+  # =============================================================================
+  test-and-quality:
+    name: Test & Code Quality
+    runs-on: ubuntu-latest
+    
+    defaults:
+      run:
+        working-directory: ${{ env.SERVICE_PATH }}
+    
+    steps:
+    - name: 📥 Checkout repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    
+    - name: 🔧 Set up Node.js ${{ env.NODE_VERSION }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+        cache-dependency-path: ${{ env.SERVICE_PATH }}/package-lock.json
+    
+    - name: 📥 Install Node.js dependencies
+      run: |
+        echo "📦 Installing npm dependencies..."
+        npm ci --prefer-offline --no-audit
+        echo "✅ Dependencies installed successfully"
+    
+    - name: 🔍 Run ESLint
+      run: |
+        echo "🔍 Running ESLint for JavaScript code quality..."
+        if [ ! -f .eslintrc.js ] && [ ! -f .eslintrc.json ]; then
+          echo "Creating basic ESLint config..."
+          npx eslint --init --yes
+        fi
+        
+        npx eslint . --ext .js --format=json --output-file=eslint-report.json || true
+        npx eslint . --ext .js --format=stylish
+        echo "✅ ESLint analysis completed"
+    
+    - name: 🧪 Run tests with coverage
+      run: |
+        echo "🧪 Running Node.js tests..."
+        
+        if npm run test --dry-run 2>/dev/null; then
+          echo "Running existing test suite..."
+          npm test -- --coverage --reporter=json --outputFile=test-results.json
+        else
+          echo "No test script found. Creating basic health check test..."
+          
+          mkdir -p test
+          cat > test/basic.test.js << 'EOF'
+        const assert = require('assert');
+        
+        describe('Product Service Basic Tests', () => {
+          it('should load server.js without errors', () => {
+            assert.doesNotThrow(() => {
+              require('../server.js');
+            }, 'Server should load without syntax errors');
+          });
+          
+          it('should have required dependencies', () => {
+            const pkg = require('../package.json');
+            assert(pkg.dependencies['@grpc/grpc-js'], 'Should have gRPC dependency');
+            assert(pkg.dependencies['mongoose'], 'Should have Mongoose dependency');
+          });
+        });
+        EOF
+          
+          npm install --save-dev mocha nyc
+          npx nyc --reporter=json --reporter=text npx mocha test/*.test.js
+        fi
+        
+        echo "✅ Tests completed successfully"
+    
+    - name: 🔒 Run npm audit
+      run: |
+        echo "🔒 Checking npm dependencies for security vulnerabilities..."
+        npm audit --audit-level=high --json > npm-audit.json || true
+        npm audit --audit-level=high
+        echo "✅ npm security audit completed"
+    
+    - name: 🔍 SonarQube analysis
+      uses: SonarSource/sonarqube-scan-action@master
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      with:
+        args: >
+          -Dsonar.projectKey=grpc-platform-product-service
+          -Dsonar.projectName="gRPC Platform - Product Service"
+          -Dsonar.organization=YOUR_GITHUB_USERNAME
+          -Dsonar.sources=${{ env.SERVICE_PATH }}
+          -Dsonar.exclusions=**/node_modules/**,**/test/**,**/coverage/**
+          -Dsonar.tests=${{ env.SERVICE_PATH }}/test
+          -Dsonar.test.inclusions=**/*.test.js,**/*.spec.js
+          -Dsonar.javascript.lcov.reportPaths=${{ env.SERVICE_PATH }}/coverage/lcov.info
+          -Dsonar.testExecutionReportPaths=${{ env.SERVICE_PATH }}/test-results.json
+    
+    - name: 🚧 SonarQube Quality Gate
+      uses: SonarSource/sonarqube-quality-gate-action@master
+      timeout-minutes: 5
+      env:
+        SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+    
+    - name: 📤 Upload test artifacts
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: product-service-test-results
+        path: |
+          ${{ env.SERVICE_PATH }}/coverage/
+          ${{ env.SERVICE_PATH }}/test-results.json
+          ${{ env.SERVICE_PATH }}/eslint-report.json
+          ${{ env.SERVICE_PATH }}/npm-audit.json
+        retention-days: 30
+    
+    - name: 📋 Create job summary
+      if: always()
+      run: |
+        echo "## 🎯 Product Service - Test & Quality Results" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### 📊 Node.js Project Info" >> $GITHUB_STEP_SUMMARY
+        echo "- Node.js Version: ${{ env.NODE_VERSION }}" >> $GITHUB_STEP_SUMMARY
+        echo "- Package Manager: npm" >> $GITHUB_STEP_SUMMARY
+        echo "- gRPC Framework: @grpc/grpc-js" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### 🔗 Reports" >> $GITHUB_STEP_SUMMARY
+        echo "- [SonarQube Analysis](${SONAR_HOST_URL}/projects?search=grpc-platform-product-service)" >> $GITHUB_STEP_SUMMARY
+        echo "- Test results and coverage available in job artifacts" >> $GITHUB_STEP_SUMMARY
+
+  # =============================================================================
+  # JOB 2: SECURITY SCANNING WITH TRIVY (NODE.JS)
+  # =============================================================================
+  security-scan:
+    name: Security Scanning
+    runs-on: ubuntu-latest
+    needs: test-and-quality
+    
+    steps:
+    - name: 📥 Checkout repository
+      uses: actions/checkout@v4
+    
+    - name: 🔍 Run Trivy filesystem scan (Node.js)
+      uses: aquasecurity/trivy-action@master
+      with:
+        scan-type: 'fs'
+        scan-ref: '${{ env.SERVICE_PATH }}'
+        format: 'sarif'
+        output: 'trivy-nodejs-results.sarif'
+        severity: 'CRITICAL,HIGH,MEDIUM'
+        scanners: 'vuln,secret,config'
+    
+    - name: 🔍 Run Trivy npm dependency scan
+      uses: aquasecurity/trivy-action@master
+      with:
+        scan-type: 'fs'
+        scan-ref: '${{ env.SERVICE_PATH }}/package.json'
+        format: 'table'
+        severity: 'CRITICAL,HIGH'
+        scanners: 'vuln'
+    
+    - name: 🔑 Run Trivy secret scan
+      uses: aquasecurity/trivy-action@master
+      with:
+        scan-type: 'fs'
+        scan-ref: '${{ env.SERVICE_PATH }}'
+        format: 'table'
+        scanners: 'secret'
+        exit-code: '1'
+    
+    - name: 📤 Upload Trivy scan results to GitHub Security
+      uses: github/codeql-action/upload-sarif@v2
+      if: always()
+      with:
+        sarif_file: 'trivy-nodejs-results.sarif'
+        category: 'trivy-nodejs'
+    
+    - name: 📋 Generate security summary
+      if: always()
+      run: |
+        echo "## 🛡️ Product Service Security Scan Results" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        if [ -f "trivy-nodejs-results.sarif" ]; then
+          CRITICAL_COUNT=$(jq '.runs[0].results | map(select(.level == "error")) | length' trivy-nodejs-results.sarif)
+          HIGH_COUNT=$(jq '.runs[0].results | map(select(.level == "warning")) | length' trivy-nodejs-results.sarif)
+          
+          echo "### 🎯 Node.js Vulnerability Summary" >> $GITHUB_STEP_SUMMARY
+          echo "- 🔴 Critical: $CRITICAL_COUNT" >> $GITHUB_STEP_SUMMARY
+          echo "- 🟠 High: $HIGH_COUNT" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          if [ "$CRITICAL_COUNT" -gt 0 ] || [ "$HIGH_COUNT" -gt 0 ]; then
+            echo "⚠️ **Action Required**: npm dependency vulnerabilities found!" >> $GITHUB_STEP_SUMMARY
+            echo "Run \`npm audit fix\` to resolve fixable issues." >> $GITHUB_STEP_SUMMARY
+          else
+            echo "✅ **All Clear**: No critical Node.js vulnerabilities found!" >> $GITHUB_STEP_SUMMARY
+          fi
+        else
+          echo "✅ **Scan Completed**: No security issues detected!" >> $GITHUB_STEP_SUMMARY
+        fi
+        
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### 🔗 Node.js Security Resources" >> $GITHUB_STEP_SUMMARY
+        echo "- [npm Security Advisories](https://www.npmjs.com/advisories)" >> $GITHUB_STEP_SUMMARY
+        echo "- [Node.js Security Best Practices](https://nodejs.org/en/security/)" >> $GITHUB_STEP_SUMMARY

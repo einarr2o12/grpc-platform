@@ -1,0 +1,304 @@
+# =============================================================================
+# GitHub Actions Workflow for Go API Gateway
+# =============================================================================
+# Purpose: Build, test, and deploy the Go API Gateway microservice
+# Triggers: When code changes in the go-api-gateway directory
+
+name: Go API Gateway CI/CD
+
+# =============================================================================
+# STEP 1: WHEN TO RUN THIS WORKFLOW
+# =============================================================================
+# Why: We only want to run this when the Go API Gateway code changes
+# Benefit: Saves CI/CD time and resources, faster feedback for developers
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'microservices/go-api-gateway/**'  # Only run when Go API Gateway changes
+      - '.github/workflows/go-api-gateway.yml'  # Or when this workflow changes
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'microservices/go-api-gateway/**'
+
+# =============================================================================
+# STEP 2: ENVIRONMENT VARIABLES
+# =============================================================================
+# Why: Centralized configuration, easier to maintain
+env:
+  SERVICE_NAME: go-api-gateway
+  SERVICE_PATH: microservices/go-api-gateway
+  GO_VERSION: '1.21'
+
+jobs:
+  # =============================================================================
+  # JOB 1: CODE QUALITY AND TESTING
+  # =============================================================================
+  # Purpose: Ensure code quality before building
+  # LSEG Requirement: "Good understanding of Software engineering concepts"
+  test-and-quality:
+    name: Test & Code Quality
+    runs-on: ubuntu-latest
+    
+    # Set default working directory for all steps in this job
+    defaults:
+      run:
+        working-directory: ${{ env.SERVICE_PATH }}
+    
+    steps:
+    # -------------------------------------------------------------------------
+    # STEP 3: CHECKOUT CODE
+    # -------------------------------------------------------------------------
+    # Why: We need the source code to work with
+    - name: 📥 Checkout repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0  # Full history needed for SonarQube analysis
+    
+    # -------------------------------------------------------------------------
+    # STEP 4: SETUP GO ENVIRONMENT
+    # -------------------------------------------------------------------------
+    # Why: We need Go compiler and tools to build and test
+    - name: 🔧 Set up Go ${{ env.GO_VERSION }}
+      uses: actions/setup-go@v4
+      with:
+        go-version: ${{ env.GO_VERSION }}
+    
+    # -------------------------------------------------------------------------
+    # STEP 5: CACHE GO MODULES
+    # -------------------------------------------------------------------------
+    # Why: Speed up builds by caching downloaded dependencies
+    # Benefit: Faster CI/CD, reduced network usage
+    - name: 📦 Cache Go modules
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.cache/go-build
+          ~/go/pkg/mod
+        key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+        restore-keys: |
+          ${{ runner.os }}-go-
+    
+    # -------------------------------------------------------------------------
+    # STEP 6: DOWNLOAD DEPENDENCIES
+    # -------------------------------------------------------------------------
+    # Why: Install all required Go modules before building
+    - name: 📥 Download Go dependencies
+      run: |
+        echo "📦 Downloading Go modules..."
+        go mod download
+        go mod verify
+        echo "✅ Dependencies downloaded and verified"
+    
+    # -------------------------------------------------------------------------
+    # STEP 7: RUN UNIT TESTS WITH COVERAGE
+    # -------------------------------------------------------------------------
+    # Why: Ensure code works correctly and measure test coverage
+    # LSEG Requirement: "Develops, tests and maintains software applications"
+    - name: 🧪 Run tests with coverage
+      run: |
+        echo "🧪 Running Go tests with coverage..."
+        go test -v -race -coverprofile=coverage.out -covermode=atomic ./...
+        
+        echo "📊 Generating coverage report..."
+        go tool cover -html=coverage.out -o coverage.html
+        
+        echo "📈 Coverage summary:"
+        go tool cover -func=coverage.out
+        
+        echo "✅ Tests completed successfully"
+    
+    # -------------------------------------------------------------------------
+    # STEP 8: LINT CODE WITH GOLANGCI-LINT
+    # -------------------------------------------------------------------------
+    # Why: Ensure code follows Go best practices and catch potential issues
+    # LSEG Requirement: "coding techniques (DRY principles)"
+    - name: 🔍 Run Go linting
+      uses: golangci/golangci-lint-action@v3
+      with:
+        version: latest
+        working-directory: ${{ env.SERVICE_PATH }}
+        args: --timeout=5m --verbose
+    
+    # -------------------------------------------------------------------------
+    # STEP 9: SONARQUBE CODE QUALITY ANALYSIS
+    # -------------------------------------------------------------------------
+    # Why: Comprehensive code quality analysis and security scanning
+    # LSEG Requirement: "Configuring and running Code/Binary scans using solutions like SonarQube"
+    - name: 🔍 SonarQube analysis
+      uses: SonarSource/sonarqube-scan-action@master
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      with:
+        args: >
+          -Dsonar.projectKey=grpc-platform-go-api-gateway
+          -Dsonar.projectName="gRPC Platform - Go API Gateway"
+          -Dsonar.organization=YOUR_GITHUB_USERNAME
+          -Dsonar.sources=${{ env.SERVICE_PATH }}
+          -Dsonar.exclusions=**/*_test.go,**/vendor/**,**/generated/**
+          -Dsonar.tests=${{ env.SERVICE_PATH }}
+          -Dsonar.test.inclusions=**/*_test.go
+          -Dsonar.go.coverage.reportPaths=${{ env.SERVICE_PATH }}/coverage.out
+    
+    # -------------------------------------------------------------------------
+    # STEP 10: SONARQUBE QUALITY GATE
+    # -------------------------------------------------------------------------
+    # Why: Enforce quality standards - fail the build if quality is poor
+    # LSEG Requirement: "Ensures a product/service meets or exceeds specified standards"
+    - name: 🚧 SonarQube Quality Gate
+      uses: SonarSource/sonarqube-quality-gate-action@master
+      timeout-minutes: 5
+      env:
+        SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+    
+    # -------------------------------------------------------------------------
+    # STEP 11: UPLOAD TEST ARTIFACTS
+    # -------------------------------------------------------------------------
+    # Why: Store test results and coverage reports for later analysis
+    - name: 📤 Upload coverage reports
+      uses: actions/upload-artifact@v3
+      if: always()  # Upload even if tests fail
+      with:
+        name: go-api-gateway-coverage
+        path: |
+          ${{ env.SERVICE_PATH }}/coverage.out
+          ${{ env.SERVICE_PATH }}/coverage.html
+        retention-days: 30
+    
+    # -------------------------------------------------------------------------
+    # STEP 12: JOB SUMMARY
+    # -------------------------------------------------------------------------
+    # Why: Provide clear feedback to developers about what happened
+    - name: 📋 Create job summary
+      if: always()
+      run: |
+        echo "## 🎯 Go API Gateway - Test & Quality Results" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### 📊 Test Coverage" >> $GITHUB_STEP_SUMMARY
+        echo '```' >> $GITHUB_STEP_SUMMARY
+        go tool cover -func=coverage.out | tail -1 >> $GITHUB_STEP_SUMMARY
+        echo '```' >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### 🔗 Reports" >> $GITHUB_STEP_SUMMARY
+        echo "- [SonarQube Analysis](${SONAR_HOST_URL}/projects?search=grpc-platform-go-api-gateway)" >> $GITHUB_STEP_SUMMARY
+        echo "- Coverage report available in job artifacts" >> $GITHUB_STEP_SUMMARY
+
+  # =============================================================================
+  # JOB 2: SECURITY SCANNING WITH TRIVY
+  # =============================================================================
+  # Purpose: Scan for security vulnerabilities in code and dependencies
+  # LSEG Requirement: "Configuring and running Code/Binary scans using solutions like... Trivy"
+  # Why Trivy: Multi-language support (Go, Node.js, PHP), container scanning, enterprise-grade
+  security-scan:
+    name: Security Scanning
+    runs-on: ubuntu-latest
+    needs: test-and-quality  # Only run after quality checks pass
+    
+    steps:
+    # -------------------------------------------------------------------------
+    # STEP 13: CHECKOUT CODE FOR SECURITY SCAN
+    # -------------------------------------------------------------------------
+    - name: 📥 Checkout repository
+      uses: actions/checkout@v4
+    
+    # -------------------------------------------------------------------------
+    # STEP 14: TRIVY FILESYSTEM SCAN
+    # -------------------------------------------------------------------------
+    # Purpose: Scan source code for vulnerabilities and misconfigurations
+    # Benefits: 
+    # - Multi-language support (Go, Node.js, PHP)
+    # - Dependency vulnerability scanning (go.mod, package.json, composer.json)
+    # - Infrastructure as Code scanning (K8s YAML, Terraform)
+    # - SAST (Static Application Security Testing)
+    - name: 🔍 Run Trivy filesystem scan
+      uses: aquasecurity/trivy-action@master
+      with:
+        scan-type: 'fs'
+        scan-ref: '${{ env.SERVICE_PATH }}'
+        format: 'sarif'
+        output: 'trivy-fs-results.sarif'
+        severity: 'CRITICAL,HIGH,MEDIUM'
+        # Scan specific areas
+        scanners: 'vuln,secret,config'
+    
+    # -------------------------------------------------------------------------
+    # STEP 15: TRIVY DEPENDENCY SCAN
+    # -------------------------------------------------------------------------
+    # Purpose: Deep scan of Go dependencies for known vulnerabilities
+    # Why important: Supply chain security, OWASP Top 10 - Vulnerable Components
+    - name: 🔍 Run Trivy dependency scan
+      uses: aquasecurity/trivy-action@master
+      with:
+        scan-type: 'fs'
+        scan-ref: '${{ env.SERVICE_PATH }}/go.mod'
+        format: 'table'
+        severity: 'CRITICAL,HIGH'
+        scanners: 'vuln'
+    
+    # -------------------------------------------------------------------------
+    # STEP 16: TRIVY SECRET SCANNING
+    # -------------------------------------------------------------------------
+    # Purpose: Find accidentally committed secrets (API keys, passwords, tokens)
+    # LSEG Requirement: "Never introduce code that exposes or logs secrets and keys"
+    - name: 🔑 Run Trivy secret scan
+      uses: aquasecurity/trivy-action@master
+      with:
+        scan-type: 'fs'
+        scan-ref: '${{ env.SERVICE_PATH }}'
+        format: 'table'
+        scanners: 'secret'
+        # Exit with error if secrets found
+        exit-code: '1'
+    
+    # -------------------------------------------------------------------------
+    # STEP 17: UPLOAD SECURITY RESULTS TO GITHUB
+    # -------------------------------------------------------------------------
+    # Purpose: Integrate security findings with GitHub Security tab
+    # Benefits: 
+    # - Developers see security issues in PR reviews
+    # - Security team gets centralized view
+    # - Automated issue tracking
+    - name: 📤 Upload Trivy scan results to GitHub Security
+      uses: github/codeql-action/upload-sarif@v2
+      if: always()  # Upload even if scan finds issues
+      with:
+        sarif_file: 'trivy-fs-results.sarif'
+        category: 'trivy-fs'
+    
+    # -------------------------------------------------------------------------
+    # STEP 18: GENERATE SECURITY REPORT
+    # -------------------------------------------------------------------------
+    # Purpose: Human-readable security summary for developers
+    - name: 📋 Generate security summary
+      if: always()
+      run: |
+        echo "## 🛡️ Security Scan Results" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        # Check if any critical/high vulnerabilities found
+        if [ -f "trivy-fs-results.sarif" ]; then
+          CRITICAL_COUNT=$(jq '.runs[0].results | map(select(.level == "error")) | length' trivy-fs-results.sarif)
+          HIGH_COUNT=$(jq '.runs[0].results | map(select(.level == "warning")) | length' trivy-fs-results.sarif)
+          
+          echo "### 🎯 Vulnerability Summary" >> $GITHUB_STEP_SUMMARY
+          echo "- 🔴 Critical: $CRITICAL_COUNT" >> $GITHUB_STEP_SUMMARY
+          echo "- 🟠 High: $HIGH_COUNT" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          if [ "$CRITICAL_COUNT" -gt 0 ] || [ "$HIGH_COUNT" -gt 0 ]; then
+            echo "⚠️ **Action Required**: Security vulnerabilities found!" >> $GITHUB_STEP_SUMMARY
+            echo "Check the [Security tab](${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/security) for details." >> $GITHUB_STEP_SUMMARY
+          else
+            echo "✅ **All Clear**: No critical or high severity vulnerabilities found!" >> $GITHUB_STEP_SUMMARY
+          fi
+        else
+          echo "✅ **Scan Completed**: No security issues detected!" >> $GITHUB_STEP_SUMMARY
+        fi
+        
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### 🔗 Security Resources" >> $GITHUB_STEP_SUMMARY
+        echo "- [GitHub Security Advisories](${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/security/advisories)" >> $GITHUB_STEP_SUMMARY
+        echo "- [Dependabot Alerts](${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/security/dependabot)" >> $GITHUB_STEP_SUMMARY
+        echo "- [Code Scanning Alerts](${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/security/code-scanning)" >> $GITHUB_STEP_SUMMARY
