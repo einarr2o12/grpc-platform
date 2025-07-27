@@ -125,7 +125,7 @@ jobs:
           -Dsonar.projectName="gRPC Platform"
           -Dsonar.organization=${{ secrets.SONAR_ORGANIZATION }}
           -Dsonar.sources=${{ env.SERVICE_PATH }}
-          -Dsonar.exclusions=**/node_modules/**,**/test/**,**/coverage/**
+          -Dsonar.exclusions=**/node_modules/**,**/test/**,**/coverage/**,**/*.html,**/package-lock.json
           -Dsonar.tests=${{ env.SERVICE_PATH }}/test
           -Dsonar.test.inclusions=**/*.test.js,**/*.spec.js
           -Dsonar.javascript.lcov.reportPaths=${{ env.SERVICE_PATH }}/coverage/lcov.info

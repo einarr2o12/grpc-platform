@@ -137,7 +137,7 @@ jobs:
           -Dsonar.projectName="gRPC Platform"
           -Dsonar.organization=${{ secrets.SONAR_ORGANIZATION }}
           -Dsonar.sources=${{ env.SERVICE_PATH }}
-          -Dsonar.exclusions=**/*_test.go,**/vendor/**,**/generated/**
+          -Dsonar.exclusions=**/*_test.go,**/vendor/**,**/generated/**,**/coverage.html,**/coverage.out,**/*.html
           -Dsonar.tests=${{ env.SERVICE_PATH }}
           -Dsonar.test.inclusions=**/*_test.go
           -Dsonar.go.coverage.reportPaths=${{ env.SERVICE_PATH }}/coverage.out
