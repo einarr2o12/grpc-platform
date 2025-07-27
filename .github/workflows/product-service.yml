@@ -138,7 +138,7 @@ jobs:
         SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
     
     - name: 📤 Upload test artifacts
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: always()
       with:
         name: product-service-test-results
