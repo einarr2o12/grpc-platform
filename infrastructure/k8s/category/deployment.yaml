@@ -20,7 +20,7 @@ spec:
     spec:
       containers:
       - name: category-service
-        image: 1911997/bff-category:v1.0
+        image: 1911997/category-service:main-4a83192-20250728-100111
         imagePullPolicy: Always
         ports:
         - containerPort: 50051

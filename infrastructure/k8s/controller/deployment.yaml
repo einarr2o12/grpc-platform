@@ -20,7 +20,7 @@ spec:
     spec:
       containers:
       - name: api-gateway
-        image: 1911997/bff-service:v1.0
+        image: 1911997/go-api-gateway:main-4a83192-20250728-095300
         imagePullPolicy: Always
         ports:
         - containerPort: 8080

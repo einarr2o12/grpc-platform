@@ -20,7 +20,7 @@ spec:
     spec:
       containers:
       - name: product-service
-        image: 1911997/bff-product:v1.0
+        image: 1911997/product-service:main-4a83192-20250728-100832
         imagePullPolicy: Always
         ports:
         - containerPort: 50052
