@@ -21,13 +21,6 @@ on:
       k8s_manifest_path:
         required: true
         type: string
-    secrets:
-      DOCKERHUB_USERNAME:
-        required: true
-      DOCKERHUB_TOKEN:
-        required: true
-      GITHUB_TOKEN:
-        required: true
 
 jobs:
   build-and-push:

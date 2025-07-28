@@ -254,7 +254,4 @@ jobs:
       service_path: microservices/product-service
       dockerfile_path: microservices/product-service/Dockerfile
       k8s_manifest_path: infrastructure/k8s/product/deployment.yaml
-    secrets:
-      DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
-      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
-      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    secrets: inherit
