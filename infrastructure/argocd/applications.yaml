@@ -82,7 +82,7 @@ spec:
   
   destination:
     server: https://kubernetes.default.svc
-    namespace: api-gateway
+    namespace: controller-service
   
   syncPolicy:
     syncOptions:
