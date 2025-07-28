@@ -26,6 +26,8 @@ jobs:
   build-and-push:
     name: Build and Push Docker Image
     runs-on: ubuntu-latest
+    permissions:
+      contents: write  # Allow writing back to repo
     outputs:
       image_tag: ${{ steps.meta.outputs.tags }}
       image_version: ${{ steps.meta.outputs.version }}
@@ -121,8 +123,10 @@ jobs:
           echo "No changes to commit"
         else
           git commit -m "🤖 Update ${{ inputs.service_name }} image to ${IMAGE_TAG##*:}"
-          git push
+          git push origin main
         fi
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     
     # -------------------------------------------------------------------------
     # STEP 8: CREATE JOB SUMMARY
