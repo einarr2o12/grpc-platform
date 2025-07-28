@@ -1,0 +1,150 @@
+# =============================================================================
+# Build and Deploy Pipeline for GitOps with ArgoCD
+# =============================================================================
+# Purpose: Build Docker images and update K8s manifests for ArgoCD
+# LSEG Requirement: "CI/CD pipeline creation and management"
+
+name: Build and Deploy
+
+on:
+  workflow_call:
+    inputs:
+      service_name:
+        required: true
+        type: string
+      service_path:
+        required: true
+        type: string
+      dockerfile_path:
+        required: true
+        type: string
+      k8s_manifest_path:
+        required: true
+        type: string
+    secrets:
+      DOCKERHUB_USERNAME:
+        required: true
+      DOCKERHUB_TOKEN:
+        required: true
+      GITHUB_TOKEN:
+        required: true
+
+jobs:
+  build-and-push:
+    name: Build and Push Docker Image
+    runs-on: ubuntu-latest
+    outputs:
+      image_tag: ${{ steps.meta.outputs.tags }}
+      image_version: ${{ steps.meta.outputs.version }}
+    
+    steps:
+    # -------------------------------------------------------------------------
+    # STEP 1: CHECKOUT CODE
+    # -------------------------------------------------------------------------
+    - name: 📥 Checkout repository
+      uses: actions/checkout@v4
+    
+    # -------------------------------------------------------------------------
+    # STEP 2: SET UP DOCKER BUILDX
+    # -------------------------------------------------------------------------
+    - name: 🔧 Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+    
+    # -------------------------------------------------------------------------
+    # STEP 3: LOGIN TO DOCKER HUB
+    # -------------------------------------------------------------------------
+    - name: 🔐 Login to Docker Hub
+      uses: docker/login-action@v3
+      with:
+        username: ${{ secrets.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKERHUB_TOKEN }}
+    
+    # -------------------------------------------------------------------------
+    # STEP 4: GENERATE METADATA
+    # -------------------------------------------------------------------------
+    - name: 🏷️ Generate Docker metadata
+      id: meta
+      uses: docker/metadata-action@v5
+      with:
+        images: |
+          ${{ secrets.DOCKERHUB_USERNAME }}/${{ inputs.service_name }}
+        tags: |
+          type=ref,event=branch
+          type=ref,event=pr
+          type=semver,pattern={{version}}
+          type=semver,pattern={{major}}.{{minor}}
+          type=sha,prefix={{branch}}-,suffix=-{{date 'YYYYMMDD-HHmmss'}}
+          type=raw,value=latest,enable={{is_default_branch}}
+    
+    # -------------------------------------------------------------------------
+    # STEP 5: BUILD AND PUSH DOCKER IMAGE
+    # -------------------------------------------------------------------------
+    - name: 🚀 Build and push Docker image
+      uses: docker/build-push-action@v5
+      with:
+        context: ${{ inputs.service_path }}
+        file: ${{ inputs.dockerfile_path }}
+        push: true
+        tags: ${{ steps.meta.outputs.tags }}
+        labels: ${{ steps.meta.outputs.labels }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+        platforms: linux/amd64,linux/arm64
+    
+    # -------------------------------------------------------------------------
+    # STEP 6: UPDATE K8S MANIFEST
+    # -------------------------------------------------------------------------
+    - name: 📝 Update Kubernetes manifest
+      run: |
+        # Extract the main tag (sha-based for uniqueness)
+        IMAGE_TAG=$(echo "${{ steps.meta.outputs.tags }}" | grep -o '[^,]*-[0-9]\{8\}-[0-9]\{6\}' | head -n1)
+        if [ -z "$IMAGE_TAG" ]; then
+          IMAGE_TAG="${{ secrets.DOCKERHUB_USERNAME }}/${{ inputs.service_name }}:latest"
+        else
+          IMAGE_TAG="${{ secrets.DOCKERHUB_USERNAME }}/${{ inputs.service_name }}:${IMAGE_TAG##*:}"
+        fi
+        
+        echo "🏷️ New image tag: $IMAGE_TAG"
+        
+        # Update the deployment manifest
+        sed -i "s|image: .*|image: $IMAGE_TAG|g" ${{ inputs.k8s_manifest_path }}
+        
+        # Show the change
+        echo "📋 Updated manifest:"
+        grep "image:" ${{ inputs.k8s_manifest_path }}
+    
+    # -------------------------------------------------------------------------
+    # STEP 7: COMMIT AND PUSH MANIFEST CHANGES
+    # -------------------------------------------------------------------------
+    - name: 💾 Commit and push manifest changes
+      run: |
+        git config --local user.email "github-actions[bot]@users.noreply.github.com"
+        git config --local user.name "github-actions[bot]"
+        
+        git add ${{ inputs.k8s_manifest_path }}
+        
+        # Only commit if there are changes
+        if git diff --staged --quiet; then
+          echo "No changes to commit"
+        else
+          git commit -m "🤖 Update ${{ inputs.service_name }} image to ${IMAGE_TAG##*:}"
+          git push
+        fi
+    
+    # -------------------------------------------------------------------------
+    # STEP 8: CREATE JOB SUMMARY
+    # -------------------------------------------------------------------------
+    - name: 📋 Create job summary
+      run: |
+        echo "## 🚀 Build and Deploy Summary" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### 📦 Service: ${{ inputs.service_name }}" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "**Docker Image Tags:**" >> $GITHUB_STEP_SUMMARY
+        echo '```' >> $GITHUB_STEP_SUMMARY
+        echo "${{ steps.meta.outputs.tags }}" | tr ',' '\n' >> $GITHUB_STEP_SUMMARY
+        echo '```' >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "**K8s Manifest:** \`${{ inputs.k8s_manifest_path }}\`" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "✅ ArgoCD will automatically deploy this change!" >> $GITHUB_STEP_SUMMARY

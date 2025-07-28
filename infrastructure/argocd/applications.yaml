@@ -1,0 +1,92 @@
+# =============================================================================
+# ArgoCD Applications for Local Testing
+# =============================================================================
+# Purpose: Define applications for automated GitOps deployments
+# This creates ArgoCD Applications that watch your local files
+
+---
+# Category Service Application
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: category-service
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: category-service
+    app.kubernetes.io/part-of: grpc-platform
+spec:
+  project: default
+  
+  source:
+    repoURL: https://github.com/einarr2o12/grpc-platform.git
+    targetRevision: main
+    path: infrastructure/k8s/category
+  
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: category-service
+  
+  syncPolicy:
+    syncOptions:
+      - CreateNamespace=true
+    automated:
+      prune: true
+      selfHeal: true
+
+---
+# Product Service Application  
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: product-service
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: product-service
+    app.kubernetes.io/part-of: grpc-platform
+spec:
+  project: default
+  
+  source:
+    repoURL: https://github.com/einarr2o12/grpc-platform.git
+    targetRevision: main
+    path: infrastructure/k8s/product
+  
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: product-service
+  
+  syncPolicy:
+    syncOptions:
+      - CreateNamespace=true
+    automated:
+      prune: true
+      selfHeal: true
+
+---
+# Go API Gateway Application
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: go-api-gateway
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: go-api-gateway
+    app.kubernetes.io/part-of: grpc-platform
+spec:
+  project: default
+  
+  source:
+    repoURL: https://github.com/einarr2o12/grpc-platform.git
+    targetRevision: main
+    path: infrastructure/k8s/controller
+  
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: api-gateway
+  
+  syncPolicy:
+    syncOptions:
+      - CreateNamespace=true
+    automated:
+      prune: true
+      selfHeal: true

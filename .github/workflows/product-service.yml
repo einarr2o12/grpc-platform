@@ -240,3 +240,21 @@ jobs:
         echo "### 🔗 Node.js Security Resources" >> $GITHUB_STEP_SUMMARY
         echo "- [npm Security Advisories](https://www.npmjs.com/advisories)" >> $GITHUB_STEP_SUMMARY
         echo "- [Node.js Security Best Practices](https://nodejs.org/en/security/)" >> $GITHUB_STEP_SUMMARY
+
+  # =============================================================================
+  # JOB 3: BUILD AND DEPLOY (GITOPS)
+  # =============================================================================
+  build-and-deploy:
+    name: Build & Deploy
+    needs: [test-and-quality, security-scan]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    uses: ./.github/workflows/build-and-deploy.yml
+    with:
+      service_name: product-service
+      service_path: microservices/product-service
+      dockerfile_path: microservices/product-service/Dockerfile
+      k8s_manifest_path: infrastructure/k8s/product/deployment.yaml
+    secrets:
+      DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

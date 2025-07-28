@@ -1,0 +1,86 @@
+# =============================================================================
+# ArgoCD Helm Values for Docker Desktop Local Testing
+# =============================================================================
+# Purpose: Optimized configuration for local development with Docker Desktop
+# Resource-efficient settings for laptop/desktop environments
+
+# Global settings
+global:
+  image:
+    tag: "v2.12.8"
+
+# ArgoCD Server - Minimal resources for local
+server:
+  replicas: 1
+  
+  extraArgs:
+    - --insecure  # No TLS for local development
+  
+  service:
+    type: ClusterIP  # Port-forward only
+  
+  # Minimal resources for Docker Desktop
+  resources:
+    limits:
+      cpu: 200m
+      memory: 256Mi
+    requests:
+      cpu: 50m
+      memory: 128Mi
+
+# Repository Server - Minimal resources
+repoServer:
+  replicas: 1
+  resources:
+    limits:
+      cpu: 200m
+      memory: 256Mi
+    requests:
+      cpu: 50m
+      memory: 128Mi
+
+# Application Controller - Minimal resources
+controller:
+  replicas: 1
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 100m
+      memory: 256Mi
+
+# Redis - Minimal resources
+redis:
+  enabled: true
+  resources:
+    limits:
+      cpu: 100m
+      memory: 128Mi
+    requests:
+      cpu: 25m
+      memory: 64Mi
+
+# Disable features not needed for local testing
+dex:
+  enabled: false  # No OIDC for local
+
+applicationSet:
+  enabled: false  # Keep it simple for local
+
+notifications:
+  enabled: false  # No notifications for local
+
+# Metrics (optional - disable to save resources)
+metrics:
+  enabled: false
+
+# Simple RBAC for local development
+configs:
+  params:
+    server.insecure: true
+    # Faster sync for local development
+    timeout.reconciliation: 60s  # Sync every minute
+    
+  rbac:
+    policy.default: role:admin  # Full admin access for local dev

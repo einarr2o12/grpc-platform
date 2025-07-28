@@ -316,3 +316,23 @@ jobs:
         echo "### 🔗 Node.js Security Resources" >> $GITHUB_STEP_SUMMARY
         echo "- [npm Security Advisories](https://www.npmjs.com/advisories)" >> $GITHUB_STEP_SUMMARY
         echo "- [Node.js Security Best Practices](https://nodejs.org/en/security/)" >> $GITHUB_STEP_SUMMARY
+
+  # =============================================================================
+  # JOB 3: BUILD AND DEPLOY (GITOPS)
+  # =============================================================================
+  # Purpose: Build Docker image and update K8s manifests for ArgoCD
+  # LSEG Requirement: "GitOps principles and practices"
+  build-and-deploy:
+    name: Build & Deploy
+    needs: [test-and-quality, security-scan]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    uses: ./.github/workflows/build-and-deploy.yml
+    with:
+      service_name: category-service
+      service_path: microservices/category-service
+      dockerfile_path: microservices/category-service/Dockerfile
+      k8s_manifest_path: infrastructure/k8s/category/deployment.yaml
+    secrets:
+      DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

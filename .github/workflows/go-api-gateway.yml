@@ -307,3 +307,21 @@ jobs:
         echo "- [GitHub Security Advisories](${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/security/advisories)" >> $GITHUB_STEP_SUMMARY
         echo "- [Dependabot Alerts](${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/security/dependabot)" >> $GITHUB_STEP_SUMMARY
         echo "- [Code Scanning Alerts](${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/security/code-scanning)" >> $GITHUB_STEP_SUMMARY
+
+  # =============================================================================
+  # JOB 3: BUILD AND DEPLOY (GITOPS)
+  # =============================================================================
+  build-and-deploy:
+    name: Build & Deploy
+    needs: [test-and-quality, security-scan]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    uses: ./.github/workflows/build-and-deploy.yml
+    with:
+      service_name: go-api-gateway
+      service_path: microservices/go-api-gateway
+      dockerfile_path: microservices/go-api-gateway/Dockerfile
+      k8s_manifest_path: infrastructure/k8s/controller/deployment.yaml
+    secrets:
+      DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
